@@ -104,17 +104,17 @@ export default function Home() {
   };
 
   const nextPhoto = useCallback(() => {
-    if (produtoSelecionado?.fotos) {
+    if (produtoSelecionado?.fotos && produtoSelecionado.fotos.length > 0) {
       setFotoAtual((current) => 
-        current === produtoSelecionado.fotos.length - 1 ? 0 : current + 1
+        current === produtoSelecionado.fotos!.length - 1 ? 0 : current + 1
       );
     }
   }, [produtoSelecionado]);
 
   const previousPhoto = useCallback(() => {
-    if (produtoSelecionado?.fotos) {
+    if (produtoSelecionado?.fotos && produtoSelecionado.fotos.length > 0) {
       setFotoAtual((current) => 
-        current === 0 ? produtoSelecionado.fotos.length - 1 : current - 1
+        current === 0 ? produtoSelecionado.fotos!.length - 1 : current - 1
       );
     }
   }, [produtoSelecionado]);
@@ -124,7 +124,7 @@ export default function Home() {
     if (produto?.fotos && produto.fotos.length > 0) {
       setFotosCards(prev => ({
         ...prev,
-        [produtoId]: (prev[produtoId] || 0) === produto.fotos.length - 1 ? 0 : (prev[produtoId] || 0) + 1
+        [produtoId]: (prev[produtoId] || 0) === produto.fotos!.length - 1 ? 0 : (prev[produtoId] || 0) + 1
       }));
     }
   }, []);
@@ -134,7 +134,7 @@ export default function Home() {
     if (produto?.fotos && produto.fotos.length > 0) {
       setFotosCards(prev => ({
         ...prev,
-        [produtoId]: (prev[produtoId] || 0) === 0 ? produto.fotos.length - 1 : (prev[produtoId] || 0) - 1
+        [produtoId]: (prev[produtoId] || 0) === 0 ? produto.fotos!.length - 1 : (prev[produtoId] || 0) - 1
       }));
     }
   }, []);
@@ -378,11 +378,10 @@ export default function Home() {
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3452.002935240868!2d-51.24719178902744!3d-30.09410227479389!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9519820d0809e52f%3A0x46253e2e64c5d46f!2sAv.%20Icara%C3%AD%2C%201717%20-%20Cristal%2C%20Porto%20Alegre%20-%20RS%2C%2090810-000!5e0!3m2!1spt-BR!2sbr!4v1746478162812!5m2!1spt-BR!2sbr"
               width="100%"
               height="100%"
-              style={{ border: 0 }}
+              className="rounded-xl border-0"
+              title="Localização da Imports.Spoa no Google Maps"
               allowFullScreen
-              loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              className="rounded-xl"
             />
           </div>
         </div>
