@@ -145,52 +145,56 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white relative">
-      <header className="p-4 flex justify-between items-center border-b border-white/10 bg-black/30 backdrop-blur-md sticky top-0 z-10">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
-          Imports.Spoa
-        </h1>
-        <nav className="space-x-4">
-          <button 
-            onClick={() => setCategoria('todos')}
-            className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-              categoria === 'todos' 
-                ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            Todos
-          </button>
-          <button 
-            onClick={() => setCategoria('novos')}
-            className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-              categoria === 'novos' 
-                ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            iPhones Novos
-          </button>
-          <button 
-            onClick={() => setCategoria('usados')}
-            className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-              categoria === 'usados' 
-                ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            iPhones Usados
-          </button>
-          <button 
-            onClick={() => setCategoria('acessorios')}
-            className={`px-4 py-2 rounded-lg transition-all duration-300 ${
-              categoria === 'acessorios' 
-                ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
-                : 'bg-white/10 hover:bg-white/20 text-white'
-            }`}
-          >
-            Acessórios
-          </button>
-        </nav>
+      <header className="p-4 border-b border-white/10 bg-black/30 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
+              Imports.Spoa
+            </h1>
+            <nav className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
+              <button 
+                onClick={() => setCategoria('todos')}
+                className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
+                  categoria === 'todos' 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                Todos
+              </button>
+              <button 
+                onClick={() => setCategoria('novos')}
+                className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
+                  categoria === 'novos' 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                iPhones Novos
+              </button>
+              <button 
+                onClick={() => setCategoria('usados')}
+                className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
+                  categoria === 'usados' 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                iPhones Usados
+              </button>
+              <button 
+                onClick={() => setCategoria('acessorios')}
+                className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
+                  categoria === 'acessorios' 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                Acessórios
+              </button>
+            </nav>
+          </div>
+        </div>
       </header>
 
       <main className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 relative z-0">
