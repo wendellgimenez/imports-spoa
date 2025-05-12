@@ -1,107 +1,177 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 
-export default function AdminLogin() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+interface DashboardData {
+  totalProducts: number
+  totalValue: number
+  totalOrders: number
+  recentOrders: {
+    id: string
+    customer_name: string
+    total: number
+    status: string
+    created_at: string
+  }[]
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData>({
+    totalProducts: 0,
+    totalValue: 0,
+    totalOrders: 0,
+    recentOrders: []
+  })
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
 
+  const fetchDashboardData = async () => {
     try {
-      console.log('Tentando fazer login com:', { email, password })
-      
-      // Fazer a requisição para a API de autenticação
-      const response = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        console.log('Login bem-sucedido, redirecionando...')
-        router.push('/admin/dashboard')
-      } else {
-        console.log('Erro no login:', data.message)
-        setError(data.message || 'Credenciais inválidas')
+      if (!isSupabaseConfigured() || !supabase) {
+        throw new Error('Supabase não está configurado')
       }
+
+      // Buscar total de produtos
+      const { count: totalProducts, error: productsError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+
+      if (productsError) throw productsError
+
+      // Buscar valor total do estoque
+      const { data: products, error: productsValueError } = await supabase
+        .from('products')
+        .select('price')
+
+      if (productsValueError) throw productsValueError
+
+      const totalValue = products?.reduce((acc, product) => acc + (product.price || 0), 0) || 0
+
+      // Buscar total de pedidos
+      const { count: totalOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+
+      if (ordersError) throw ordersError
+
+      // Buscar pedidos recentes
+      const { data: recentOrders, error: recentOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (recentOrdersError) throw recentOrdersError
+
+      setData({
+        totalProducts: totalProducts || 0,
+        totalValue,
+        totalOrders: totalOrders || 0,
+        recentOrders: recentOrders || []
+      })
     } catch (err) {
-      console.error('Erro durante o login:', err)
-      setError('Erro ao fazer login')
+      console.error('Erro ao buscar dados do dashboard:', err)
+      setError('Erro ao carregar dados do dashboard')
     } finally {
       setLoading(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-gray-600">Carregando dados...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-red-600">{error}</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Área Administrativa
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Faça login para acessar o painel
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-600 mb-2">Total de Produtos</h2>
+          <p className="text-3xl font-bold text-gray-900">{data.totalProducts}</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-600 mb-2">Valor Total do Estoque</h2>
+          <p className="text-3xl font-bold text-gray-900">
+            R$ {data.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Senha</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-600 mb-2">Total de Pedidos</h2>
+          <p className="text-3xl font-bold text-gray-900">{data.totalOrders}</p>
+        </div>
+      </div>
 
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-          </div>
-        </form>
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b">
+          <h2 className="text-lg font-semibold">Pedidos Recentes</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Cliente
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.recentOrders.map((order) => (
+                <tr key={order.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      R$ {order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {order.status === 'completed' ? 'Concluído' :
+                       order.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

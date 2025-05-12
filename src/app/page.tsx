@@ -1,84 +1,64 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Instagram, Phone, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-interface Produto {
-  id: number;
-  nome: string;
-  categoria: string;
-  descricao: string;
-  imagem: string;
-  preco: number;
-  detalhes?: string[];
-  fotos?: string[];
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  category: string;
+  created_at: string;
 }
 
-const produtos: Produto[] = [
-  {
-    id: 1,
-    nome: 'iPhone 11 Pro Max - 64GB',
-    categoria: 'novos',
-    descricao: 'iPhone 11 Pro Max novo, lacrado.',
-    imagem: '/iphone11-pro-max-64gb.png',
-    preco: 4999.90,
-    detalhes: [
-      'Tela Super Retina XDR de 6,5 polegadas',
-      'Chip A13 Bionic',
-      'Câmera tripla de 12MP',
-      'Bateria de longa duração',
-      'Garantia de 1 ano'
-    ],
-    fotos: [
-      '/iphone11-pro-max-64gb.png',
-      '/iphone11-pro-max-64gb-2.png',
-      '/iphone11-pro-max-64gb-3.png'
-    ]
-  },
-  {
-    id: 2,
-    nome: 'iPhone 13 - 128GB (Usado)',
-    categoria: 'usados',
-    descricao: 'Em ótimo estado, 90% de bateria.',
-    imagem: '/iphone13-128gb.png',
-    preco: 2890.00
-  },
-  {
-    id: 3,
-    nome: 'iPhone 15 Pro Max - 256GB',
-    categoria: 'novos',
-    descricao: 'iPhone 15 Pro Max novo, lacrado.',
-    imagem: '/iphone15-pro-max-256gb.png',
-    preco: 5990.00
-  },
-  {
-    id: 4,
-    nome: 'iPhone 12 - 64GB (Usado)',
-    categoria: 'usados',
-    descricao: 'Em ótimo estado, 90% de bateria.',
-    imagem: '/iphone12-64gb.png',
-    preco: 2590.00
-  },
-  {
-    id: 5,
-    nome: 'Kit Apple',
-    categoria: 'acessorios',
-    descricao: 'Kit Apple com AirPods Pro, AirPods Max e Apple Watch.',
-    imagem: '/kit-apple.png',
-    preco: 1890.00
-  },
-];
-
 export default function Home() {
-  const [categoria, setCategoria] = useState('todos');
-  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Product | null>(null);
   const [fotoAtual, setFotoAtual] = useState(0);
-  const [fotosCards, setFotosCards] = useState<{ [key: number]: number }>({});
+  const [fotosCards, setFotosCards] = useState<{ [key: string]: number }>({});
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const minSwipeDistance = 50;
+
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory]);
+
+  const fetchProducts = async () => {
+    try {
+      if (!isSupabaseConfigured() || !supabase) {
+        throw new Error('Supabase não está configurado');
+      }
+
+      let query = supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (selectedCategory) {
+        query = query.eq('category', selectedCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setProducts(data || []);
+    } catch (err) {
+      console.error('Erro ao buscar produtos:', err);
+      setError('Erro ao carregar produtos');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -103,45 +83,51 @@ export default function Home() {
     }
   };
 
-  const nextPhoto = useCallback(() => {
-    if (produtoSelecionado?.fotos && produtoSelecionado.fotos.length > 0) {
+  const nextPhoto = () => {
+    if (produtoSelecionado && produtoSelecionado.fotos && produtoSelecionado.fotos.length > 0) {
       setFotoAtual((current) => 
-        current === produtoSelecionado.fotos!.length - 1 ? 0 : current + 1
+        current === produtoSelecionado.fotos.length - 1 ? 0 : current + 1
       );
     }
-  }, [produtoSelecionado]);
+  };
 
-  const previousPhoto = useCallback(() => {
-    if (produtoSelecionado?.fotos && produtoSelecionado.fotos.length > 0) {
+  const previousPhoto = () => {
+    if (produtoSelecionado && produtoSelecionado.fotos && produtoSelecionado.fotos.length > 0) {
       setFotoAtual((current) => 
-        current === 0 ? produtoSelecionado.fotos!.length - 1 : current - 1
+        current === 0 ? produtoSelecionado.fotos.length - 1 : current - 1
       );
     }
-  }, [produtoSelecionado]);
+  };
 
-  const nextPhotoCard = useCallback((produtoId: number) => {
-    const produto = produtos.find(p => p.id === produtoId);
-    if (produto?.fotos && produto.fotos.length > 0) {
-      setFotosCards(prev => ({
-        ...prev,
-        [produtoId]: (prev[produtoId] || 0) === produto.fotos!.length - 1 ? 0 : (prev[produtoId] || 0) + 1
-      }));
-    }
-  }, []);
+  const nextPhotoCard = (produtoId: string) => {
+    setFotosCards(prev => ({
+      ...prev,
+      [produtoId]: (prev[produtoId] || 0) === fotosCards[produtoId] || 0 ? 0 : (prev[produtoId] || 0) + 1
+    }));
+  };
 
-  const previousPhotoCard = useCallback((produtoId: number) => {
-    const produto = produtos.find(p => p.id === produtoId);
-    if (produto?.fotos && produto.fotos.length > 0) {
-      setFotosCards(prev => ({
-        ...prev,
-        [produtoId]: (prev[produtoId] || 0) === 0 ? produto.fotos!.length - 1 : (prev[produtoId] || 0) - 1
-      }));
-    }
-  }, []);
+  const previousPhotoCard = (produtoId: string) => {
+    setFotosCards(prev => ({
+      ...prev,
+      [produtoId]: (prev[produtoId] || 0) === 0 ? fotosCards[produtoId] || 0 : (prev[produtoId] || 0) - 1
+    }));
+  };
 
-  const produtosFiltrados = categoria === 'todos'
-    ? produtos
-    : produtos.filter(p => p.categoria === categoria);
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-gray-600">Carregando produtos...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-xl text-red-600">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white relative">
@@ -153,9 +139,9 @@ export default function Home() {
             </h1>
             <nav className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
               <button 
-                onClick={() => setCategoria('todos')}
+                onClick={() => setSelectedCategory('')}
                 className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
-                  categoria === 'todos' 
+                  selectedCategory === '' 
                     ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
                     : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
@@ -163,9 +149,9 @@ export default function Home() {
                 Todos
               </button>
               <button 
-                onClick={() => setCategoria('novos')}
+                onClick={() => setSelectedCategory('Novos')}
                 className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
-                  categoria === 'novos' 
+                  selectedCategory === 'Novos' 
                     ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
                     : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
@@ -173,19 +159,19 @@ export default function Home() {
                 iPhones Novos
               </button>
               <button 
-                onClick={() => setCategoria('usados')}
+                onClick={() => setSelectedCategory('Seminovos')}
                 className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
-                  categoria === 'usados' 
+                  selectedCategory === 'Seminovos' 
                     ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
                     : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
               >
-                iPhones Usados
+                iPhones Seminovos
               </button>
               <button 
-                onClick={() => setCategoria('acessorios')}
+                onClick={() => setSelectedCategory('Acessórios')}
                 className={`px-3 py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
-                  categoria === 'acessorios' 
+                  selectedCategory === 'Acessórios' 
                     ? 'bg-green-500 text-white shadow-lg shadow-green-500/50' 
                     : 'bg-white/10 hover:bg-white/20 text-white'
                 }`}
@@ -198,31 +184,31 @@ export default function Home() {
       </header>
 
       <main className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 relative z-0">
-        {produtosFiltrados.map(prod => (
+        {products.map((product) => (
           <div 
-            key={prod.id} 
+            key={product.id} 
             className="border border-white/10 rounded-2xl p-4 bg-black/40 backdrop-blur-md hover:bg-black/50 transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/20 group cursor-pointer"
             onClick={() => {
-              setProdutoSelecionado(prod);
+              setProdutoSelecionado(product);
               setFotoAtual(0);
             }}
           >
             <div className="relative w-full h-64 mb-4 bg-black/30 rounded-xl flex items-center justify-center overflow-hidden group/image">
               <Image
-                src={prod.fotos?.[fotosCards[prod.id] || 0] || prod.imagem}
-                alt={prod.nome}
+                src={product.image_url}
+                alt={product.name}
                 fill
                 className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
               
               {/* Setas de Navegação no Card */}
-              {prod.fotos && prod.fotos.length > 1 && (
+              {product.fotos && product.fotos.length > 1 && (
                 <>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      previousPhotoCard(prod.id);
+                      previousPhotoCard(product.id);
                     }}
                     className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-black/70 z-10"
                     aria-label="Foto anterior"
@@ -232,7 +218,7 @@ export default function Home() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      nextPhotoCard(prod.id);
+                      nextPhotoCard(product.id);
                     }}
                     className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-black/70 z-10"
                     aria-label="Próxima foto"
@@ -242,16 +228,16 @@ export default function Home() {
                 </>
               )}
             </div>
-            <h2 className="text-lg font-semibold text-white mb-2">{prod.nome}</h2>
-            <p className="text-sm text-gray-300 mb-3">{prod.descricao}</p>
+            <h2 className="text-lg font-semibold text-white mb-2">{product.name}</h2>
+            <p className="text-sm text-gray-300 mb-3">{product.description}</p>
             <p className="text-2xl font-bold text-green-400 mb-4">
-              R$ {prod.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <button
               className="w-full bg-green-500 text-white px-4 py-3 rounded-xl inline-block text-center hover:bg-green-600 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50"
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(`https://wa.me/5551995619576?text=Olá, tenho interesse no produto: ${encodeURIComponent(prod.nome)}`, '_blank');
+                window.open(`https://wa.me/5551995619576?text=Olá, tenho interesse no produto: ${encodeURIComponent(product.name)}`, '_blank');
               }}
             >
               Comprar no WhatsApp
@@ -266,7 +252,7 @@ export default function Home() {
           <div className="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-bold text-white">{produtoSelecionado.nome}</h2>
+                <h2 className="text-2xl font-bold text-white">{produtoSelecionado.name}</h2>
                 <button
                   onClick={() => setProdutoSelecionado(null)}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -284,8 +270,8 @@ export default function Home() {
                 onTouchEnd={onTouchEnd}
               >
                 <Image
-                  src={produtoSelecionado.fotos?.[fotoAtual] || produtoSelecionado.imagem}
-                  alt={produtoSelecionado.nome}
+                  src={produtoSelecionado.fotos?.[fotoAtual] || produtoSelecionado.image_url}
+                  alt={produtoSelecionado.name}
                   fill
                   className="object-contain p-4"
                 />
@@ -329,23 +315,12 @@ export default function Home() {
 
               {/* Detalhes do Produto */}
               <div className="space-y-4">
-                <p className="text-gray-300">{produtoSelecionado.descricao}</p>
-                <div className="bg-black/30 rounded-xl p-4">
-                  <h3 className="text-lg font-semibold text-white mb-2">Especificações:</h3>
-                  <ul className="space-y-2">
-                    {produtoSelecionado.detalhes?.map((detalhe, index) => (
-                      <li key={index} className="text-gray-300 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full" />
-                        {detalhe}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <p className="text-gray-300">{produtoSelecionado.description}</p>
                 <p className="text-3xl font-bold text-green-400">
-                  R$ {produtoSelecionado.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  R$ {produtoSelecionado.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <a
-                  href={`https://wa.me/5551995619576?text=Olá, tenho interesse no produto: ${encodeURIComponent(produtoSelecionado.nome)}`}
+                  href={`https://wa.me/5551995619576?text=Olá, tenho interesse no produto: ${encodeURIComponent(produtoSelecionado.name)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-green-500 text-white px-6 py-4 rounded-xl inline-block text-center text-lg font-semibold hover:bg-green-600 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50"
