@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { hash } from 'bcryptjs'
 
 export async function POST(request: Request) {
   try {
+    if (!isSupabaseConfigured() || !supabase) {
+      return NextResponse.json(
+        { message: 'Serviço temporariamente indisponível' },
+        { status: 503 }
+      )
+    }
+
     const { email, password, name } = await request.json()
 
     // Verificar se já existe algum usuário admin

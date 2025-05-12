@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
 import { sign } from 'jsonwebtoken'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { compare } from 'bcryptjs'
 
 export async function POST(request: Request) {
   try {
+    if (!isSupabaseConfigured() || !supabase) {
+      return NextResponse.json(
+        { message: 'Serviço temporariamente indisponível' },
+        { status: 503 }
+      )
+    }
+
     const { email, password } = await request.json()
 
     // Buscar o usuário no Supabase
