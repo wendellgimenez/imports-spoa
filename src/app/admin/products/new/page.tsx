@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import Image from 'next/image'
 
 export default function NewProductPage() {
   const router = useRouter()
@@ -49,7 +50,7 @@ export default function NewProductPage() {
       if (formData.image) {
         const fileExt = formData.image.name.split('.').pop()
         const fileName = `${Math.random()}.${fileExt}`
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('products')
           .upload(fileName, formData.image)
 
@@ -176,9 +177,11 @@ export default function NewProductPage() {
           />
           {imagePreview && (
             <div className="mt-2">
-              <img
+              <Image
                 src={imagePreview}
                 alt="Preview"
+                width={300}
+                height={200}
                 className="max-w-xs max-h-48 object-contain"
               />
             </div>

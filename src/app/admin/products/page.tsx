@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import Image from 'next/image'
 
 interface Product {
   id: string
@@ -122,11 +123,12 @@ export default function ProductsPage() {
               <tr key={product.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 flex-shrink-0">
-                      <img
-                        className="h-10 w-10 rounded-full object-cover"
+                    <div className="h-10 w-10 flex-shrink-0 relative">
+                      <Image
                         src={product.image_url}
                         alt={product.name}
+                        fill
+                        className="rounded-full object-cover"
                       />
                     </div>
                     <div className="ml-4">
